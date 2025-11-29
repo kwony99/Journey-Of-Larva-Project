@@ -1,66 +1,159 @@
 using UnityEngine;
+using System.Collections;
 
 public class PlayerController : MonoBehaviour
 {
     [Header("Movement Settings")]
-    public float moveSpeed = 3f;
-    public float jumpForce = 5f; // 점프 높이 설정
+    public float moveSpeed = 5f;
+    public float jumpForce = 12f;
 
-    [Header("Ground Detection")]
-    public Transform groundCheck; // 발밑 위치를 표시할 오브젝트
-    public float groundCheckRadius = 0.2f; // 감지 반경
-    public LayerMask groundLayer; // 땅으로 인식할 레이어
+    [Header("Ground Check (BoxCast)")]
+    public Vector2 boxSize = new Vector2(0.8f, 0.2f); // 발바닥 크기
+    public float castDistance = 0.2f; // 감지 거리 (조금 넉넉하게)
+    public LayerMask groundLayer; 
 
+    // 내부 변수들
     private Rigidbody2D rb;
     private SpriteRenderer sr;
     private Animator anim;
-    private bool isGrounded; // 현재 땅에 있는지 여부
+
+    private bool isGrounded;
+    private Vector2 surfaceNormal;
+    private float jumpCooldown;
+    private bool isKnockedBack;
+    private float defaultGravity;
 
     void Start()
     {
         rb = GetComponent<Rigidbody2D>();
         sr = GetComponent<SpriteRenderer>();
         anim = GetComponent<Animator>();
+        defaultGravity = rb.gravityScale;
     }
 
     void Update()
     {
-        // 1. 지면 감지 (발밑에 원을 그려서 땅 레이어와 닿았는지 확인)
-        // groundCheck가 비어있다면 오류가 나므로 꼭 할당해야 합니다.
-        if (groundCheck != null)
-        {
-            isGrounded = Physics2D.OverlapCircle(groundCheck.position, groundCheckRadius, groundLayer);
-        }
+        if (jumpCooldown > 0) jumpCooldown -= Time.deltaTime;
 
-        // 2. 입력 받기
-        float moveInput = Input.GetAxisRaw("Horizontal");
-
-        // 3. 점프 (스페이스바 & 땅에 있을 때만)
-        if (Input.GetButtonDown("Jump") && isGrounded)
-        {
-            rb.linearVelocity = new Vector2(rb.linearVelocity.x, jumpForce);
-            anim.SetTrigger("DoJump"); // 점프 애니메이션 발동
-        }
-
-        // 4. 물리 이동 (좌우 이동은 기존 속도 유지, 상하 속도는 리지드바디 유지)
-        rb.linearVelocity = new Vector2(moveInput * moveSpeed, rb.linearVelocity.y);
-
-        // 5. 방향 뒤집기
-        if (moveInput > 0) sr.flipX = false;
-        else if (moveInput < 0) sr.flipX = true;
-
-        // 6. 애니메이션 업데이트
-        anim.SetFloat("Speed", Mathf.Abs(moveInput));
-        anim.SetBool("IsGrounded", isGrounded); // 공중/지상 상태 전달
+        CheckGround();
+        ProcessInput();
+        UpdateAnimation();
     }
 
-    // 에디터에서 지면 감지 범위를 눈으로 보기 위한 함수 (게임엔 영향 없음)
+    void CheckGround()
+    {
+        if (jumpCooldown > 0)
+        {
+            isGrounded = false;
+            surfaceNormal = Vector2.up;
+            return;
+        }
+
+        // [핵심 수정 1] 박스 시작점을 몸통 중심부(위쪽)로 올립니다.
+        // position(발끝) + 위로 0.3만큼
+        Vector2 boxOrigin = (Vector2)transform.position + Vector2.up * 0.3f;
+        
+        // 위에서 시작했으니 거리도 그만큼 더 길게(castDistance + 0.3f) 쏴야 바닥에 닿습니다.
+        RaycastHit2D hit = Physics2D.BoxCast(boxOrigin, boxSize, 0f, Vector2.down, castDistance + 0.3f, groundLayer);
+        
+        isGrounded = hit.collider != null;
+
+        if (isGrounded)
+        {
+            surfaceNormal = hit.normal;
+        }
+        else
+        {
+            surfaceNormal = Vector2.up;
+        }
+
+        // [핵심 수정 2] 회전 코드 삭제 -> 항상 똑바로 서 있게 고정
+        transform.rotation = Quaternion.identity; 
+    }
+
+    void ProcessInput()
+    {
+        if (isKnockedBack) return;
+
+        float moveInput = Input.GetAxisRaw("Horizontal");
+
+        // [점프]
+        if (Input.GetButtonDown("Jump") && isGrounded)
+        {
+            jumpCooldown = 0.2f;
+            isGrounded = false;
+            rb.gravityScale = defaultGravity;
+            
+            rb.linearVelocity = new Vector2(rb.linearVelocity.x, jumpForce);
+            anim.SetTrigger("DoJump");
+            return;
+        }
+
+        // [이동]
+        if (isGrounded && moveInput != 0)
+        {
+            rb.gravityScale = defaultGravity;
+
+            // 1. 경사면 방향 계산
+            Vector2 slopeDir = Vector2.Perpendicular(surfaceNormal).normalized;
+            Vector2 moveDir = slopeDir * -moveInput;
+
+            rb.linearVelocity = moveDir * moveSpeed;
+
+            // [핵심 수정: 강력한 접착력 적용]
+            // 오르막이든 내리막이든, 땅에 붙어있다면 무조건 바닥으로 강하게 누릅니다.
+            // 단, 너무 세게 누르면 오르막길 속도가 느려질 수 있으니 적당한 값(-5f ~ -10f)을 줍니다.
+            // 튕겨나가는 힘을 이길만큼 충분히 강해야 합니다.
+            
+            rb.linearVelocity = new Vector2(rb.linearVelocity.x, rb.linearVelocity.y - 5f); 
+        }
+        else if (!isGrounded)
+        {
+            // 공중 이동
+            rb.gravityScale = defaultGravity;
+            rb.linearVelocity = new Vector2(moveInput * moveSpeed, rb.linearVelocity.y);
+        }
+        else // [지상 정지]
+        {
+            // 멈춰있을 때 미끄러짐 방지
+            rb.linearVelocity = Vector2.zero;
+            rb.gravityScale = 0f; 
+        }
+
+        // [방향 반전]
+        if (moveInput > 0) sr.flipX = false;
+        else if (moveInput < 0) sr.flipX = true;
+    }
+
+    void UpdateAnimation()
+    {
+        anim.SetFloat("Speed", rb.linearVelocity.magnitude > 0.1f ? rb.linearVelocity.magnitude : 0f);
+        anim.SetBool("IsGrounded", isGrounded);
+        
+        // [필수] 낙하 상태(Fall)로 넘어가기 위해 수직 속도 전달
+        anim.SetFloat("VerticalSpeed", rb.linearVelocity.y);
+    }
+    public void ApplyKnockback(Vector2 knockbackForce)
+    {
+        StopAllCoroutines();
+        isKnockedBack = true;
+        rb.gravityScale = defaultGravity;
+        rb.linearVelocity = Vector2.zero;
+        rb.AddForce(knockbackForce, ForceMode2D.Impulse);
+        StartCoroutine(ResetKnockbackRoutine());
+    }
+
+    IEnumerator ResetKnockbackRoutine()
+    {
+        yield return new WaitForSeconds(0.3f);
+        isKnockedBack = false;
+    }
+
     void OnDrawGizmos()
     {
-        if (groundCheck != null)
-        {
-            Gizmos.color = Color.red;
-            Gizmos.DrawWireSphere(groundCheck.position, groundCheckRadius);
-        }
+        Gizmos.color = Color.red;
+        // 기즈모도 실제 박스 위치랑 똑같이 그려서 확인
+        Vector2 boxOrigin = (Vector2)transform.position + Vector2.up * 0.3f;
+        Gizmos.DrawWireCube(boxOrigin + Vector2.down * (castDistance + 0.3f), boxSize);
     }
 }

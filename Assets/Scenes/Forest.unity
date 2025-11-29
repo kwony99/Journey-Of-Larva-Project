@@ -4686,9 +4686,9 @@ GameObject:
   - component: {fileID: 216653233}
   - component: {fileID: 216653235}
   - component: {fileID: 216653234}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Platform 8 (1)
-  m_TagString: Untagged
+  m_TagString: Ground
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -25769,11 +25769,11 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 1006581802670623411, guid: 12ace6ce62ade0646b60799698de4b1a, type: 3}
       propertyPath: m_Size.x
-      value: 4.68
+      value: 6.130695
       objectReference: {fileID: 0}
     - target: {fileID: 1006581802670623411, guid: 12ace6ce62ade0646b60799698de4b1a, type: 3}
       propertyPath: m_Size.y
-      value: 3.5
+      value: 2.8500001
       objectReference: {fileID: 0}
     - target: {fileID: 1006581802670623411, guid: 12ace6ce62ade0646b60799698de4b1a, type: 3}
       propertyPath: m_SortingLayer
@@ -25782,6 +25782,18 @@ PrefabInstance:
     - target: {fileID: 1006581802670623411, guid: 12ace6ce62ade0646b60799698de4b1a, type: 3}
       propertyPath: m_SortingLayerID
       value: 1831104673
+      objectReference: {fileID: 0}
+    - target: {fileID: 2262467069051125506, guid: 12ace6ce62ade0646b60799698de4b1a, type: 3}
+      propertyPath: m_Material
+      value: 
+      objectReference: {fileID: 6200000, guid: 5838fc1d911b1e5428c568bb97915d7a, type: 2}
+    - target: {fileID: 2262467069051125506, guid: 12ace6ce62ade0646b60799698de4b1a, type: 3}
+      propertyPath: m_Constraints
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 2262467069051125506, guid: 12ace6ce62ade0646b60799698de4b1a, type: 3}
+      propertyPath: m_GravityScale
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 2634137183997400955, guid: 12ace6ce62ade0646b60799698de4b1a, type: 3}
       propertyPath: m_LocalPosition.x
@@ -25829,7 +25841,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7069903468197304612, guid: 12ace6ce62ade0646b60799698de4b1a, type: 3}
       propertyPath: m_Layer
-      value: 6
+      value: 7
       objectReference: {fileID: 0}
     - target: {fileID: 7069903468197304612, guid: 12ace6ce62ade0646b60799698de4b1a, type: 3}
       propertyPath: m_TagString
@@ -25878,10 +25890,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c5fd31674d4d1264da063598669279f2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerController
-  moveSpeed: 12
-  jumpForce: 7
-  groundCheck: {fileID: 2070582971}
-  groundCheckRadius: 0.2
+  moveSpeed: 10
+  jumpForce: 15
+  boxSize: {x: 4, y: 0.51}
+  castDistance: 0.1
   groundLayer:
     serializedVersion: 2
     m_Bits: 64
@@ -41682,8 +41694,8 @@ Transform:
   m_GameObject: {fileID: 2016267256}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -0.82, y: 6.41, z: 5.4688497}
-  m_LocalScale: {x: 0.84056264, y: 0.6530237, z: 1}
+  m_LocalPosition: {x: -0.82, y: 6.3975, z: 5.4688497}
+  m_LocalScale: {x: 0.84056264, y: 0.66033757, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 1266132196}
@@ -43138,7 +43150,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 2070582971}
-  m_Layer: 6
+  m_Layer: 7
   m_Name: GroundCheck
   m_TagString: Untagged
   m_Icon: {fileID: 0}
